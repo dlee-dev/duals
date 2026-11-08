@@ -1,0 +1,2056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flamecraft Duals</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep: #241a12;
+    --bg-panel: #2f2318;
+    --bg-panel-2: #3a2c1d;
+    --wood-line: #4a3826;
+    --parchment: #ece0c4;
+    --parchment-2: #e0d2ac;
+    --ink: #2c2115;
+    --gold: #c99a3e;
+    --gold-bright: #e0b45c;
+    --ember: #c8632f;
+    --text-light: #f1e6cf;
+    --text-muted: #b7a487;
+    --c-bread: #d9a15c;
+    --c-crystal: #5fc7c0;
+    --c-meat: #c1503e;
+    --c-iron: #9aa3b3;
+    --c-potion: #a684d9;
+    --c-plant: #6fae6b;
+    --radius-lg: 18px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, #3a2b1a 0%, transparent 55%),
+      radial-gradient(ellipse at 90% 10%, #33251a 0%, transparent 50%),
+      var(--bg-deep);
+    color:var(--text-light);
+    font-family:'Nunito Sans', sans-serif, 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji';
+    min-height:100vh;
+    padding:20px;
+  }
+  .wrap{max-width:1180px;margin:0 auto;}
+
+  header.top{
+    display:flex; align-items:baseline; justify-content:space-between;
+    flex-wrap:wrap; gap:10px;
+    border-bottom:2px solid var(--wood-line);
+    padding-bottom:14px; margin-bottom:18px;
+  }
+  header.top h1{
+    font-family:'Baloo 2', sans-serif;
+    font-weight:800;
+    font-size:2rem;
+    margin:0;
+    color:var(--gold-bright);
+    letter-spacing:0.3px;
+  }
+  header.top .tagline{
+    color:var(--text-muted);
+    font-size:0.92rem;
+    margin-top:2px;
+  }
+  header.top .headerbtns{display:flex; gap:8px;}
+
+  button{
+    font-family:'Nunito Sans', sans-serif;
+    font-weight:700;
+    border:none;
+    border-radius:10px;
+    padding:9px 16px;
+    cursor:pointer;
+    font-size:0.92rem;
+    transition:transform 0.08s ease, filter 0.15s ease;
+  }
+  button:active{transform:translateY(1px);}
+  button:disabled{opacity:0.35; cursor:not-allowed;}
+  .btn-primary{background:var(--ember); color:#fff5e8;}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.12);}
+  .btn-gold{background:var(--gold); color:#2c2115;}
+  .btn-gold:hover:not(:disabled){filter:brightness(1.12);}
+  .btn-ghost{background:transparent; color:var(--text-light); border:1.5px solid var(--wood-line);}
+  .btn-ghost:hover:not(:disabled){border-color:var(--gold);}
+  .btn-small{padding:6px 11px; font-size:0.82rem; border-radius:8px;}
+
+  .layout{
+    display:grid;
+    grid-template-columns: 1fr 340px;
+    gap:22px;
+  }
+  @media (max-width:880px){
+    .layout{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    background:linear-gradient(180deg, var(--bg-panel), var(--bg-panel-2));
+    border:1px solid var(--wood-line);
+    border-radius:var(--radius-lg);
+    padding:16px;
+  }
+
+  /* ---- Status bar ---- */
+  .statusbar{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:10px;
+    margin-bottom:16px;
+  }
+  .turn-chip{
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-panel-2);
+    border:1px solid var(--wood-line);
+    padding:8px 14px;
+    border-radius:999px;
+  }
+  .turn-chip .dot{width:11px; height:11px; border-radius:50%;}
+  .turn-chip.p0 .dot{background:var(--c-crystal);}
+  .turn-chip.p1 .dot{background:var(--c-meat);}
+  .turn-chip .label{font-weight:800; font-family:'Baloo 2',sans-serif; font-size:1.05rem;}
+  .phase-label{color:var(--text-muted); font-size:0.85rem; margin-left:4px;}
+
+  .instruction{
+    background:#1d160e;
+    border:1.5px dashed var(--gold);
+    border-radius:var(--radius-md);
+    padding:12px 14px;
+    margin-bottom:14px;
+    font-size:0.95rem;
+    line-height:1.45;
+  }
+  .instruction strong{color:var(--gold-bright);}
+  .instruction .opts{display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+
+  /* ---- Board ---- */
+  .board-wrap{display:flex; justify-content:center;}
+  svg#board{width:100%; height:auto; max-width:560px; user-select:none;}
+  .hexcell{
+    fill:#3a2c1d;
+    stroke:#5a4630;
+    stroke-width:1.5;
+    transition:fill 0.15s ease;
+    cursor:default;
+  }
+  .hexcell.selectable{
+    fill:#4a3a26;
+    stroke:var(--gold);
+    stroke-width:2.5;
+    cursor:pointer;
+  }
+  .hexcell.selectable:hover{fill:#5c4a30;}
+  .hexcell.picked{
+    fill:#5a3a1e;
+    stroke:var(--ember);
+    stroke-width:3;
+  }
+  .token-circle{stroke:#20160c; stroke-width:1.5; pointer-events:none;}
+  .token-emoji{font-size:15px; text-anchor:middle; dominant-baseline:central; pointer-events:none; font-family:'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif;}
+  .dual-arc{pointer-events:none;}
+  .stack-badge{fill:#20160c; }
+  .stack-badge-text{fill:var(--text-light); font-size:9px; font-weight:800; text-anchor:middle; dominant-baseline:central;}
+
+  /* ---- Sidebar ---- */
+  .side-section{margin-bottom:18px;}
+  .side-section h3{
+    font-family:'Baloo 2', sans-serif;
+    font-size:1.02rem;
+    margin:0 0 8px 0;
+    color:var(--gold-bright);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .coin-row{display:flex; align-items:center; gap:6px; font-size:0.85rem; color:var(--text-muted);}
+  .coin{display:inline-block; width:16px; height:16px; border-radius:50%; background:var(--gold); border:1.5px solid #8a6a26;}
+
+  .hand-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .card{
+    background:var(--parchment);
+    color:var(--ink);
+    border-radius:var(--radius-sm);
+    width:96px;
+    padding:8px 6px 6px;
+    box-shadow:0 3px 0 rgba(0,0,0,0.35);
+    cursor:pointer;
+    border:2px solid transparent;
+    text-align:center;
+    flex-shrink:0;
+  }
+  .card.active{border-color:var(--ember); transform:translateY(-3px);}
+  .card:hover{filter:brightness(1.03);}
+  .card .shapebox{
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    background:var(--parchment-2);
+    border-radius:6px;
+    padding:6px 2px;
+    margin-bottom:5px;
+    min-height:52px;
+    justify-content:center;
+  }
+  .card .rowline{display:flex; gap:3px;}
+  .card .rowicon{font-size:15px; line-height:1;}
+  .card .shapelabel{font-size:0.62rem; text-transform:uppercase; letter-spacing:0.4px; color:#6b5a3e; font-weight:700;}
+  .card .rep{font-family:'Baloo 2',sans-serif; font-weight:800; font-size:0.95rem;}
+  .card.back{
+    background:repeating-linear-gradient(135deg, #5a3a1e, #5a3a1e 6px, #4a3018 6px, #4a3018 12px);
+    color:var(--text-light);
+    display:flex; align-items:center; justify-content:center;
+    height:88px;
+  }
+
+  .scored-row{display:flex; gap:6px; flex-wrap:wrap;}
+  .mini-card{
+    background:var(--parchment);
+    color:var(--ink);
+    border-radius:6px;
+    padding:3px 6px;
+    font-size:0.75rem;
+    display:flex; align-items:center; gap:4px;
+    font-weight:700;
+  }
+
+  .log-box{
+    max-height:150px;
+    overflow-y:auto;
+    font-size:0.8rem;
+    color:var(--text-muted);
+    line-height:1.5;
+    background:#1d160e;
+    border-radius:var(--radius-sm);
+    padding:8px 10px;
+    border:1px solid var(--wood-line);
+  }
+  .log-box div{margin-bottom:3px;}
+  .log-box .me0{color:var(--c-crystal);}
+  .log-box .me1{color:var(--c-meat);}
+
+  details.help{
+    background:var(--bg-panel-2);
+    border:1px solid var(--wood-line);
+    border-radius:var(--radius-md);
+    padding:10px 14px;
+    margin-top:18px;
+  }
+  details.help summary{cursor:pointer; font-weight:700; color:var(--gold-bright); font-family:'Baloo 2',sans-serif;}
+  details.help .helpgrid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:10px; margin-top:12px; font-size:0.87rem; line-height:1.5; color:var(--text-light);
+  }
+  details.help .abil{background:#1d160e; border-radius:8px; padding:8px 10px;}
+  details.help .abil b{color:var(--gold-bright);}
+  .orderchart{display:flex; gap:6px; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:1.05rem;}
+  .orderchart .arrow{color:var(--text-muted); font-size:0.9rem;}
+
+  .overlay{
+    position:fixed; inset:0; background:rgba(15,10,6,0.72);
+    display:flex; align-items:center; justify-content:center;
+    z-index:50; padding:20px;
+  }
+  .overlay .box{
+    background:var(--parchment); color:var(--ink);
+    border-radius:16px; padding:26px 30px; max-width:440px; text-align:center;
+    box-shadow:0 10px 40px rgba(0,0,0,0.5);
+  }
+  .overlay .box h2{font-family:'Baloo 2',sans-serif; margin-top:0;}
+  .overlay .box .finalscore{font-size:2.4rem; font-weight:800; font-family:'Baloo 2',sans-serif; margin:10px 0;}
+
+  .footer-note{text-align:center; color:var(--text-muted); font-size:0.78rem; margin-top:22px;}
+
+  /* ---- Lobby ---- */
+  .lobby-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:16px; text-align:left;}
+  @media (max-width:520px){ .lobby-grid{grid-template-columns:1fr;} }
+  .lobby-card{
+    background:var(--parchment-2);
+    border-radius:12px;
+    padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .lobby-card h3{margin:0; font-family:'Baloo 2',sans-serif; font-size:1.05rem; color:var(--ink);}
+  .lobby-card p{margin:0; font-size:0.85rem; color:#5a4a30; line-height:1.4;}
+  .lobby-card input{
+    font-family:'Nunito Sans', sans-serif;
+    font-size:1.1rem;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    padding:8px 10px;
+    border-radius:8px;
+    border:1.5px solid #b7a17a;
+    text-align:center;
+    width:100%;
+  }
+  .lobby-status{font-size:0.85rem; color:#6b5a3e; min-height:1.2em;}
+  .lobby-error{color:#a33a2a; font-weight:700; font-size:0.85rem;}
+  .lobby-divider{text-align:center; color:#8a7a5a; font-size:0.8rem; margin:2px 0;}
+
+  /* ---- Net banner ---- */
+  .net-banner{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    background:var(--bg-panel-2);
+    border:1px solid var(--wood-line);
+    border-radius:var(--radius-md);
+    padding:8px 14px;
+    margin-bottom:14px;
+    font-size:0.85rem;
+  }
+  .net-banner .net-dot{width:9px; height:9px; border-radius:50%; background:#8a8a8a; flex-shrink:0;}
+  .net-banner.connected .net-dot{background:#6fae6b;}
+  .net-banner.waiting .net-dot{background:var(--gold);}
+  .net-banner.error .net-dot{background:#c1503e;}
+  .net-banner code{
+    background:#1d160e; color:var(--gold-bright);
+    padding:2px 8px; border-radius:6px; letter-spacing:2px; font-size:0.95rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>🐉 Flamecraft Duals</h1>
+      <div class="tagline">An unofficial fan-made digital adaptation for two — pass-and-play on one device, or online with a room code.</div>
+    </div>
+    <div class="headerbtns">
+      <button class="btn-ghost btn-small" id="newGameBtn">New Game</button>
+    </div>
+  </header>
+
+  <div id="netBanner" class="net-banner" style="display:none;">
+    <div class="net-dot"></div>
+    <span id="netBannerText"></span>
+    <button class="btn-ghost btn-small" id="netCopyBtn" style="display:none;">Copy code</button>
+  </div>
+
+  <div class="layout">
+    <div class="panel" id="mainPanel">
+      <div class="statusbar">
+        <div class="turn-chip" id="turnChip">
+          <div class="dot"></div>
+          <span class="label" id="turnLabel">Player 1's turn</span>
+          <span class="phase-label" id="phaseLabel">Draw a dragon</span>
+        </div>
+        <div class="coin-row" id="coinSummary"></div>
+      </div>
+
+      <div class="instruction" id="instructionBox"></div>
+
+      <div class="board-wrap">
+        <svg id="board" viewBox="-210 -230 420 460" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="panel side-section">
+        <h3>Your hand</h3>
+        <div class="hand-row" id="handRow"></div>
+      </div>
+      <div class="panel side-section">
+        <h3>Opponent's hand</h3>
+        <div class="hand-row" id="oppHandRow"></div>
+      </div>
+      <div class="panel side-section">
+        <h3>Scored — Player 1 <span id="p0total"></span></h3>
+        <div class="scored-row" id="p0scored"></div>
+      </div>
+      <div class="panel side-section">
+        <h3>Scored — Player 2 <span id="p1total"></span></h3>
+        <div class="scored-row" id="p1scored"></div>
+      </div>
+      <div class="panel side-section">
+        <h3>Log</h3>
+        <div class="log-box" id="logBox"></div>
+      </div>
+    </div>
+  </div>
+
+  <details class="help">
+    <summary>How to play &amp; dragon abilities</summary>
+    <div style="margin-top:10px; font-size:0.88rem; line-height:1.6;">
+      On your turn you draw a random dragon token, place it on any hex that has fewer than 3 tokens stacked, then may
+      optionally <b>fire up</b> its ability. Then check whether the tokens now on the board match either of the two
+      secret shop cards in your hand — a straight <b>row of 3</b> hexes or a triangular <b>cluster of 3</b> mutually
+      touching hexes — with the exact dragon types shown on the card (a dual-colored dragon can count as either of its
+      two types). Score any card you can match. Once per turn, before ending it, you may spend a coin to cycle two
+      cards out of your hand. The game ends when the bag or the shop deck runs dry; whoever has the most reputation
+      (plus 1 per leftover coin) wins.
+    </div>
+    <div class="helpgrid">
+      <div class="abil"><b>🍞 Bread</b> — Draw another dragon from the bag and place it (you may fire it up too).</div>
+      <div class="abil"><b>💎 Crystal</b> — Draw 3 dragons, place 1 anywhere, return the other 2 to the bag. No further fire-up.</div>
+      <div class="abil"><b>🍖 Meat</b> — Move one dragon adjacent to it to any other legal space on the board.</div>
+      <div class="abil"><b>⚙️ Iron</b> — Move up to two dragons adjacent to it, each exactly one space.</div>
+      <div class="abil"><b>🧪 Potion</b> — Swap the positions of any two dragons on the board.</div>
+      <div class="abil"><b>🌿 Plant</b> — Fire up the ability of one adjacent dragon (chains can keep going through more plants!).</div>
+      <div class="abil">A <b>dual-colored dragon</b> lets you choose which of its two abilities to fire, and counts as either type when matching a shop card.</div>
+    </div>
+    <div class="orderchart">
+      <span style="color:var(--text-muted); font-size:0.85rem;">Fire-Up Chart (low → high, used to break ties for first player):</span>
+    </div>
+    <div class="orderchart" id="orderChartRow"></div>
+  </details>
+
+  <div class="footer-note">Fan-made homage inspired by Flamecraft Duals (Cardboard Alchemy) — not an official product.</div>
+</div>
+
+<div id="overlayRoot"></div>
+
+<div id="lobbyRoot" class="overlay" style="display:none;">
+  <div class="box" style="max-width:560px;">
+    <h2>🐉 Flamecraft Duals</h2>
+    <p style="font-size:0.9rem; color:#5a4a30; margin-top:-6px;">Choose how you'd like to play.</p>
+    <div class="lobby-grid">
+      <div class="lobby-card">
+        <h3>Pass &amp; play</h3>
+        <p>Share one device and take turns looking at the screen.</p>
+        <button class="btn-primary" id="lobbyLocalBtn">Play locally</button>
+      </div>
+      <div class="lobby-card">
+        <h3>Create online room</h3>
+        <p>Start a game and send the room code to a friend on another device. Keep this tab open while you play.</p>
+        <button class="btn-gold" id="lobbyCreateBtn">Create room</button>
+      </div>
+    </div>
+    <div class="lobby-divider">— or —</div>
+    <div class="lobby-card">
+      <h3>Join online room</h3>
+      <p>Enter the code your friend sent you.</p>
+      <input type="text" id="lobbyJoinInput" maxlength="8" placeholder="ROOM CODE" autocomplete="off">
+      <button class="btn-gold" id="lobbyJoinBtn">Join room</button>
+    </div>
+    <div class="lobby-status" id="lobbyStatus"></div>
+  </div>
+</div>
+
+<!-- PeerJS (MIT) provides the browser-to-browser connection for online play. Pinned to 1.5.5.
+     If the CDN is blocked, drop a copy of peerjs.min.js next to this file and it is used instead. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>window.Peer || document.write('<script src="peerjs.min.js"><\/script>');</script>
+
+<script>
+(function(){
+
+// ---------- Static data ----------
+const DRAGON = {
+  bread:   {emoji:'🍞', name:'Bread',   color:'#d9a15c'},
+  crystal: {emoji:'💎', name:'Crystal', color:'#5fc7c0'},
+  meat:    {emoji:'🍖', name:'Meat',    color:'#c1503e'},
+  iron:    {emoji:'⚙️', name:'Iron',    color:'#9aa3b3'},
+  potion:  {emoji:'🧪', name:'Potion',  color:'#a684d9'},
+  plant:   {emoji:'🌿', name:'Plant',   color:'#6fae6b'},
+};
+const COLORS = Object.keys(DRAGON);
+const FIRE_UP_ORDER = ['crystal','iron','meat','potion','plant','bread'];
+const DUAL_PAIRS = [['bread','crystal'],['crystal','meat'],['meat','iron'],['iron','potion'],['potion','plant'],['plant','bread']];
+const DIRS = [[1,0],[1,-1],[0,-1],[-1,0],[-1,1],[0,1]];
+const LINE_DIRS = [[1,0],[0,1],[1,-1]];
+
+function key(c){ return c.q+','+c.r; }
+function parseKey(k){ const [q,r]=k.split(',').map(Number); return {q,r}; }
+
+// Build 19-cell hex grid (radius 2)
+const CELLS = [];
+for(let q=-2;q<=2;q++){ for(let r=-2;r<=2;r++){ if(Math.abs(q+r)<=2){ CELLS.push({q,r}); } } }
+const CELL_KEYS = CELLS.map(key);
+
+function isAdjacent(a,b){
+  const dq=b.q-a.q, dr=b.r-a.r;
+  return DIRS.some(d=>d[0]===dq && d[1]===dr);
+}
+function neighborsOf(k){
+  const c = parseKey(k);
+  return DIRS.map(d=>key({q:c.q+d[0], r:c.r+d[1]})).filter(nk=>CELL_KEYS.includes(nk));
+}
+function hexDist(a){ return (Math.abs(a.q)+Math.abs(a.r)+Math.abs(a.q+a.r))/2; }
+
+// Precompute line triples and triangle triples (as arrays of 3 keys)
+const LINE_TRIPLES = [];
+CELLS.forEach(a=>{
+  LINE_DIRS.forEach(d=>{
+    const b={q:a.q+d[0], r:a.r+d[1]};
+    const c={q:a.q+2*d[0], r:a.r+2*d[1]};
+    const bk=key(b), ck=key(c);
+    if(CELL_KEYS.includes(bk) && CELL_KEYS.includes(ck)){
+      LINE_TRIPLES.push([key(a), bk, ck]);
+    }
+  });
+});
+const TRIANGLE_TRIPLES = [];
+for(let i=0;i<CELLS.length;i++){
+  for(let j=i+1;j<CELLS.length;j++){
+    if(!isAdjacent(CELLS[i],CELLS[j])) continue;
+    for(let k2=j+1;k2<CELLS.length;k2++){
+      if(isAdjacent(CELLS[i],CELLS[k2]) && isAdjacent(CELLS[j],CELLS[k2])){
+        TRIANGLE_TRIPLES.push([key(CELLS[i]), key(CELLS[j]), key(CELLS[k2])]);
+      }
+    }
+  }
+}
+
+// Pixel projection (pointy-top hex)
+const HEX_SIZE = 40;
+function hexToPixel(k){
+  const c = parseKey(k);
+  const x = HEX_SIZE*Math.sqrt(3)*(c.q + c.r/2);
+  const y = HEX_SIZE*1.5*c.r;
+  return {x,y};
+}
+function hexCorners(cx,cy){
+  const pts=[];
+  for(let i=0;i<6;i++){
+    const angle = Math.PI/180*(60*i-30);
+    pts.push([cx+HEX_SIZE*0.94*Math.cos(angle), cy+HEX_SIZE*0.94*Math.sin(angle)]);
+  }
+  return pts.map(p=>p.join(',')).join(' ');
+}
+
+// ---------- Shop deck ----------
+function buildDeck(){
+  const cards = [];
+  let cid=0;
+  COLORS.forEach(c=>{
+    cards.push({id:'c'+(cid++), shape:'line', pattern:[c,c,c], rep:4});
+    cards.push({id:'c'+(cid++), shape:'triangle', pattern:[c,c,c], rep:5});
+  });
+  let idx=0;
+  COLORS.forEach(A=>{
+    COLORS.forEach(B=>{
+      if(A!==B){
+        const shape = idx%2===0 ? 'line':'triangle';
+        cards.push({id:'c'+(cid++), shape, pattern:[A,A,B], rep:2});
+        idx++;
+      }
+    });
+  });
+  return cards;
+}
+
+// Seedable PRNG (mulberry32). Its state is saved with each Undo snapshot, so a rewound turn replays
+// with exactly the same draws and shuffles (no re-rolling the bag by undoing).
+let RNG_STATE = 0;
+try{ RNG_STATE = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0; }
+catch(e){ RNG_STATE = Math.floor(Math.random()*4294967296) >>> 0; }
+function rand(){
+  RNG_STATE = (RNG_STATE + 0x6D2B79F5) >>> 0;
+  let t = RNG_STATE;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(rand()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+// ---------- Game state ----------
+let G = null; // main game state
+let UI = { pendingSelection:null, pendingChoice:null, activeCard:null, cardPicks:[], message:'' };
+const UNDO = { key:null, snap:null, snapCore:null, rng:null }; // private snapshot of the start of the current turn (see Undo Turn)
+
+// ---------- Networking (online play via PeerJS / WebRTC — no server of our own) ----------
+// The host's browser owns the room: its PeerJS id is ROOM_PREFIX + room code, and the guest dials that id.
+// The free public PeerJS broker is only used to introduce the two browsers; game data then flows directly
+// between them over a WebRTC data channel. Whoever is acting pushes the full game state to the other side.
+const ROOM_PREFIX = 'flamecraft-duals-';
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const CODE_LEN = 6;
+
+// ICE servers. Default is STUN only (free). Two players who are both behind strict / symmetric NATs
+// (some mobile carriers, locked-down corporate or school networks) may be unable to connect without a
+// TURN relay. If that happens, add one here, e.g.
+//   {urls:'turn:your.turn.host:3478', username:'USER', credential:'PASS'}
+const ICE_SERVERS = [
+  {urls:'stun:stun.l.google.com:19302'},
+  {urls:'stun:stun1.l.google.com:19302'},
+];
+// null = use the free public PeerJS cloud broker (0.peerjs.com). To use your own PeerServer instead:
+//   {host:'peer.example.com', port:443, path:'/', secure:true}
+const PEER_SERVER = null;
+
+const SESSION_KEY = 'fcd_p2p_session';
+const SESSION_MAX_AGE_MS = 3*24*60*60*1000;
+const MAX_CHUNK = 12000;       // split bigger messages so we never depend on data-channel size limits
+const PING_MS = 3000;          // heartbeat interval
+const DEAD_MS = 12000;         // no traffic for this long => link considered lost
+const CONNECT_TIMEOUT_MS = 15000;
+
+const NET = {
+  enabled: false,
+  code: null,
+  myPlayer: null,      // 0 = host, 1 = guest
+  token: null,         // seat token issued by the host to the guest
+  version: 0,          // bumps on every state push; higher wins
+  joined: false,       // the guest has taken the second seat (game can start)
+  link: 'down',        // 'up' | 'down' — direct connection to the opponent
+  brokerOpen: false,
+  status: 'offline',   // offline | connecting | waiting-for-opponent | connected | reconnecting
+  peerLeft: false,     // opponent explicitly left the room
+  peer: null, conn: null,
+  setupGen: 0, brokerPending: false,
+  retryTimer: null, retryDelay: 1000,
+  pushTimer: null, forceNextPush: false,
+  turnInProgress: false, // stays true through the final handoff push, even after G.current flips
+  lastSent: null,        // JSON of the last state we sent or received (skips redundant pushes)
+  lastHeard: 0, pingTimer: null,
+  chunkSeq: 0, chunkBuf: null,
+  onWelcome: null, onDialFail: null, dialAt: 0,
+  ready: false,        // session established (created/joined/resumed): recovery loops are allowed to run
+};
+
+function isMyTurn(){
+  if(!NET.enabled) return true;
+  if(!NET.joined) return false;
+  return !!G && NET.myPlayer===G.current;
+}
+
+function updateStatus(){
+  if(!NET.enabled) NET.status = 'offline';
+  else if(NET.joined) NET.status = NET.link==='up' ? 'connected' : 'reconnecting';
+  else NET.status = (NET.myPlayer===0 && NET.brokerOpen) ? 'waiting-for-opponent' : 'connecting';
+}
+
+// ---- session persistence (survives reloads; both browsers keep a copy of the game) ----
+function saveSession(){
+  if(!NET.enabled || !NET.code || !G) return;
+  try{
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      code:NET.code, myPlayer:NET.myPlayer, token:NET.token, version:NET.version,
+      joined:NET.joined, G, savedAt:Date.now(),
+      undo: UNDO.snap ? {key:UNDO.key, snap:UNDO.snap, snapCore:UNDO.snapCore, rng:UNDO.rng} : null
+    }));
+  }catch(e){}
+}
+function loadSession(){
+  try{
+    const raw = localStorage.getItem(SESSION_KEY);
+    if(!raw) return null;
+    const s = JSON.parse(raw);
+    if(!s || !s.G || !s.code || (Date.now()-s.savedAt) > SESSION_MAX_AGE_MS) return null;
+    return s;
+  }catch(e){ return null; }
+}
+function clearSession(){
+  try{ localStorage.removeItem(SESSION_KEY); }catch(e){}
+}
+
+// ---- helpers ----
+function peerCtor(){ return window.Peer || (window.peerjs && window.peerjs.Peer) || null; }
+
+function peerOptions(){
+  const o = { debug:1, config:{ iceServers:ICE_SERVERS, sdpSemantics:'unified-plan' } };
+  if(PEER_SERVER) Object.assign(o, PEER_SERVER);
+  return o;
+}
+
+function randomCode(){
+  let s = '';
+  for(let i=0;i<CODE_LEN;i++) s += CODE_ALPHABET[Math.floor(Math.random()*CODE_ALPHABET.length)];
+  return s;
+}
+function randomToken(){
+  let s = '';
+  for(let i=0;i<20;i++) s += CODE_ALPHABET[Math.floor(Math.random()*CODE_ALPHABET.length)];
+  return s;
+}
+
+function safeClose(x){ try{ x && x.close && x.close(); }catch(e){} }
+function safeDestroy(p){ try{ p && p.destroy && p.destroy(); }catch(e){} }
+
+function sendMsg(obj, conn){
+  conn = conn || NET.conn;
+  if(!conn || !conn.open) return false;
+  try{
+    const s = JSON.stringify(obj);
+    if(s.length <= MAX_CHUNK){
+      conn.send(obj);
+    } else {
+      const id = ++NET.chunkSeq, n = Math.ceil(s.length/MAX_CHUNK);
+      for(let i=0;i<n;i++) conn.send({t:'chunk', id, i, n, d:s.slice(i*MAX_CHUNK,(i+1)*MAX_CHUNK)});
+    }
+    return true;
+  }catch(e){ return false; }
+}
+
+// Reassembles chunked messages; returns a complete message object or null.
+function unchunk(raw){
+  if(!raw || typeof raw!=='object') return null;
+  if(raw.t!=='chunk') return raw;
+  if(!NET.chunkBuf || NET.chunkBuf.id!==raw.id){ NET.chunkBuf = {id:raw.id, n:raw.n, parts:[], got:0}; }
+  const b = NET.chunkBuf;
+  if(b.parts[raw.i]===undefined){ b.parts[raw.i] = raw.d; b.got++; }
+  if(b.got<b.n) return null;
+  NET.chunkBuf = null;
+  try{ return JSON.parse(b.parts.join('')); }catch(e){ return null; }
+}
+
+// ---- broker (PeerJS cloud) connection ----
+// Creates a fresh Peer for our role. Resolves on first 'open', rejects on a first fatal error / timeout.
+// Afterwards the same handlers keep the room reachable (host) or the dial-in possible (guest).
+function connectBroker(){
+  const Ctor = peerCtor();
+  if(!Ctor) return Promise.reject({type:'no-library'});
+  if(NET.brokerPending) return Promise.reject({type:'busy'});
+  NET.brokerPending = true;
+  const old = NET.peer;
+  const gen = ++NET.setupGen;
+  NET.peer = null; NET.brokerOpen = false;
+  safeDestroy(old);
+  const isHost = NET.myPlayer===0;
+  let peer;
+  try{
+    peer = isHost ? new Ctor(ROOM_PREFIX+NET.code, peerOptions()) : new Ctor(undefined, peerOptions());
+  }catch(e){
+    NET.brokerPending = false;
+    return Promise.reject({type:'browser-incompatible'});
+  }
+  NET.peer = peer;
+  return new Promise((resolve, reject)=>{
+    let first = true;
+    const settle = (fn, arg)=>{ if(!first) return; first = false; NET.brokerPending = false; clearTimeout(timer); fn(arg); };
+    const timer = setTimeout(()=>{ if(gen===NET.setupGen){ settle(reject, {type:'timeout'}); } }, CONNECT_TIMEOUT_MS);
+    peer.on('open', ()=>{
+      if(gen!==NET.setupGen) return;
+      NET.brokerOpen = true;
+      NET.retryDelay = 1000;
+      updateStatus(); updateNetBanner();
+      settle(resolve, peer);
+      if(NET.enabled && !isHost && NET.joined && NET.link==='down'){ scheduleRecover(300); }
+    });
+    peer.on('connection', conn=>{
+      if(gen!==NET.setupGen || !isHost){ safeClose(conn); return; }
+      hostAcceptConn(conn);
+    });
+    peer.on('disconnected', ()=>{
+      if(gen!==NET.setupGen) return;
+      NET.brokerOpen = false;
+      updateStatus(); updateNetBanner();
+      if(!first) scheduleRecover();
+    });
+    peer.on('close', ()=>{
+      if(gen!==NET.setupGen) return;
+      NET.brokerOpen = false;
+      settle(reject, {type:'closed'});
+      updateStatus(); updateNetBanner();
+      scheduleRecover();
+    });
+    peer.on('error', err=>{
+      if(gen!==NET.setupGen) return;
+      const type = err && err.type;
+      if(first){ settle(reject, err||{type:'unknown'}); safeDestroy(peer); return; }
+      if(type==='peer-unavailable'){
+        if(NET.onDialFail) NET.onDialFail(err);
+        return; // otherwise the recover loop simply dials again
+      }
+      scheduleRecover();
+    });
+  });
+}
+
+function scheduleRecover(delay){
+  if(NET.retryTimer || !NET.enabled || !NET.ready || NET.peerLeft) return;
+  const d = (typeof delay==='number') ? delay : NET.retryDelay;
+  if(typeof delay!=='number') NET.retryDelay = Math.min(NET.retryDelay*2, 10000);
+  NET.retryTimer = setTimeout(()=>{ NET.retryTimer = null; recover(); }, d);
+}
+
+// Idempotent "get back to a working state" step, retried with backoff until it sticks.
+function recover(){
+  if(!NET.enabled || !NET.ready || NET.peerLeft) return;
+  const p = NET.peer;
+  const alive = !!p && !p.destroyed && !p.disconnected;
+  if(NET.myPlayer===0){
+    if(alive) return; // host just needs to stay registered; the guest redials
+    if(p && !p.destroyed && p.disconnected){ try{ p.reconnect(); }catch(e){} }
+    else { connectBroker().catch(()=>{}); }
+    scheduleRecover();
+  } else {
+    if(NET.link==='up') return;
+    if(alive){ dialHost(); }
+    else if(p && !p.destroyed && p.disconnected){ try{ p.reconnect(); }catch(e){} }
+    else { connectBroker().then(dialHost).catch(()=>{}); }
+    scheduleRecover();
+  }
+}
+
+// ---- guest: dial the host ----
+function dialHost(){
+  const peer = NET.peer;
+  if(!peer || peer.destroyed || peer.disconnected) return;
+  if(NET.conn && !NET.conn.open && (Date.now()-NET.dialAt) < 6000) return; // a dial is still in flight
+  safeClose(NET.conn); NET.conn = null;
+  let conn;
+  try{ conn = peer.connect(ROOM_PREFIX+NET.code, {reliable:true, serialization:'json'}); }
+  catch(e){ return; }
+  NET.conn = conn; NET.dialAt = Date.now();
+  conn.on('open', ()=>{
+    if(conn!==NET.conn) return;
+    NET.lastHeard = Date.now();
+    sendMsg({t:'hello', token:NET.token, v:NET.version}, conn);
+  });
+  conn.on('data', raw=>{ if(conn===NET.conn){ const m = unchunk(raw); if(m) handleMessage(m, conn); } });
+  conn.on('close', ()=>{ if(conn===NET.conn) onLinkLost(); });
+  conn.on('error', ()=>{ if(conn===NET.conn) onLinkLost(); });
+}
+
+// ---- host: accept the guest ----
+function hostAcceptConn(conn){
+  let identified = false;
+  conn.on('data', raw=>{
+    const m = unchunk(raw);
+    if(!m) return;
+    if(!identified){
+      if(m.t!=='hello') return;
+      identified = true;
+      hostHandleHello(conn, m);
+    } else if(conn===NET.conn){
+      handleMessage(m, conn);
+    }
+  });
+  conn.on('close', ()=>{ if(conn===NET.conn) onLinkLost(); });
+  conn.on('error', ()=>{ if(conn===NET.conn) onLinkLost(); });
+  setTimeout(()=>{ if(!identified) safeClose(conn); }, 10000);
+}
+
+function hostHandleHello(conn, m){
+  const tokenOk = !!NET.token && m.token===NET.token;
+  if(NET.joined && !tokenOk){
+    sendMsg({t:'full'}, conn);
+    setTimeout(()=>safeClose(conn), 400);
+    return;
+  }
+  if(!NET.joined){
+    NET.token = randomToken();
+    NET.joined = true;
+  }
+  if(NET.conn && NET.conn!==conn){ const o = NET.conn; NET.conn = null; safeClose(o); }
+  NET.conn = conn;
+  NET.link = 'up';
+  NET.lastHeard = Date.now();
+  NET.retryDelay = 1000;
+  const guestV = (typeof m.v==='number') ? m.v : 0;
+  sendMsg({t:'welcome', seat:1, token:NET.token, v:NET.version, state:(NET.version>guestV ? G : undefined)}, conn);
+  // if the guest is ahead of us (it played while we were offline) it will push its state next
+  saveSession();
+  updateStatus();
+  render();
+}
+
+// ---- messages (both directions) ----
+function handleMessage(m, conn){
+  NET.lastHeard = Date.now();
+  switch(m.t){
+    case 'ping': break;
+    case 'welcome': handleWelcome(m); break;
+    case 'state': applyRemoteState(m); break;
+    case 'rematch':
+      if(NET.myPlayer===0 && G && G.gameOver){ NET.forceNextPush = true; newGame(); }
+      break;
+    case 'full':
+      if(NET.onWelcome) NET.onWelcome('full');
+      else { NET.peerLeft = true; updateNetBanner(); }
+      break;
+    case 'bye':
+      NET.peerLeft = true;
+      NET.link = 'down';
+      safeClose(NET.conn); NET.conn = null;
+      updateStatus(); updateNetBanner();
+      break;
+  }
+}
+
+function handleWelcome(m){
+  NET.token = m.token;
+  NET.joined = true;
+  NET.link = 'up';
+  NET.peerLeft = false;
+  NET.retryDelay = 1000;
+  const myV = NET.version;
+  if(m.state && m.v>=myV){
+    G = m.state;
+    NET.version = m.v;
+    NET.lastSent = JSON.stringify(G);
+    NET.turnInProgress = false;
+  } else if(m.v<myV && G){
+    // we are ahead (played while the host was away): hand our state to the host
+    sendMsg({t:'state', v:NET.version, from:NET.myPlayer, state:G});
+  }
+  saveSession();
+  updateStatus();
+  if(NET.onWelcome){ const f = NET.onWelcome; NET.onWelcome = null; f('ok'); }
+  else render();
+}
+
+function applyRemoteState(m){
+  if(!m.state || typeof m.v!=='number') return;
+  if(NET.forceNextPush) return; // we are mid-rematch as host; our state wins
+  const newer = m.v>NET.version || (m.v===NET.version && m.from===0 && NET.myPlayer===1);
+  if(!newer) return;
+  G = m.state;
+  NET.version = m.v;
+  NET.lastSent = JSON.stringify(G);
+  NET.turnInProgress = false;
+  saveSession();
+  render();
+}
+
+function onLinkLost(){
+  if(!NET.enabled || !NET.ready) return;
+  safeClose(NET.conn); NET.conn = null;
+  const wasUp = NET.link==='up';
+  NET.link = 'down';
+  updateStatus(); updateNetBanner();
+  if(NET.myPlayer===1 && !NET.peerLeft) scheduleRecover(wasUp ? 500 : undefined);
+}
+
+// ---- heartbeat ----
+function startHeartbeat(){
+  stopHeartbeat();
+  NET.lastHeard = Date.now();
+  NET.pingTimer = setInterval(()=>{
+    if(!NET.enabled) return;
+    if(NET.conn && NET.conn.open) sendMsg({t:'ping'});
+    if(NET.link==='up' && !document.hidden && (Date.now()-NET.lastHeard) > DEAD_MS) onLinkLost();
+  }, PING_MS);
+}
+function stopHeartbeat(){
+  if(NET.pingTimer){ clearInterval(NET.pingTimer); NET.pingTimer = null; }
+}
+
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden || !NET.enabled) return;
+  NET.lastHeard = Date.now();
+  if(NET.link==='up' && (!NET.conn || !NET.conn.open)) onLinkLost();
+  else if(NET.link==='down') scheduleRecover(200);
+});
+window.addEventListener('online', ()=>{ if(NET.enabled && NET.link==='down') scheduleRecover(200); });
+// Closing or reloading the tab: hang up politely so the opponent notices right away
+// instead of waiting for the heartbeat timeout. (The session stays saved and resumes on reload.)
+window.addEventListener('pagehide', ()=>{ if(NET.enabled && NET.ready && NET.conn){ safeClose(NET.conn); } });
+
+// ---- lobby actions ----
+function describeNetError(err){
+  if(err==='full') return 'that room already has two players.';
+  if(err==='not_found') return 'no room with that code was found. Check the code, and make sure your friend still has their game open.';
+  if(err==='timeout') return 'could not reach the other player. If you are on a strict network (work, school, some mobile carriers) peer-to-peer connections can be blocked.';
+  if(err==='no-library') return 'the online-play library (PeerJS) could not be loaded. Check your connection or ad-blocker and reload.';
+  if(err==='network') return 'could not reach the matchmaking service. Check your connection and try again.';
+  return 'something went wrong. Please try again.';
+}
+
+async function hostCreateRoom(){
+  if(NET.enabled || NET.brokerPending) return;
+  setLobbyStatus('Creating room…');
+  NET.enabled = true; NET.myPlayer = 0; NET.joined = false; NET.link = 'down';
+  NET.token = null; NET.version = 0; NET.peerLeft = false;
+  let lastErr = null;
+  for(let attempt=0; attempt<5; attempt++){
+    NET.code = randomCode();
+    try{
+      await connectBroker();
+      lastErr = null;
+      break;
+    }catch(err){
+      lastErr = err;
+      if(!(err && err.type==='unavailable-id')) break; // only a taken code is worth retrying with a new one
+    }
+  }
+  if(lastErr){
+    const t = lastErr.type;
+    resetNet();
+    setLobbyStatus('Could not create a room: ' + describeNetError(t==='no-library' ? 'no-library' : 'network'), true);
+    return;
+  }
+  NET.ready = true;
+  newGame(); // local setup; host is seat 0
+  NET.version = 1;
+  NET.lastSent = JSON.stringify(G);
+  saveSession();
+  startHeartbeat();
+  updateStatus();
+  render();
+}
+
+async function joinRoomWithCode(rawCode){
+  const code = (rawCode||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if(!code){ setLobbyStatus('Enter a room code first.', true); return; }
+  if(NET.enabled || NET.brokerPending) return;
+  setLobbyStatus('Joining room ' + code + '…');
+  NET.enabled = true; NET.code = code; NET.myPlayer = 1; NET.joined = false; NET.link = 'down';
+  NET.token = null; NET.version = 0; NET.peerLeft = false;
+  let result;
+  try{
+    await connectBroker();
+    result = await new Promise(resolve=>{
+      const done = r=>{ clearTimeout(t); NET.onWelcome = null; NET.onDialFail = null; resolve(r); };
+      const t = setTimeout(()=>done('timeout'), CONNECT_TIMEOUT_MS);
+      NET.onWelcome = r=>done(r);
+      NET.onDialFail = ()=>done('not_found');
+      dialHost();
+    });
+  }catch(err){
+    result = (err && err.type==='no-library') ? 'no-library' : 'network';
+  }
+  if(result!=='ok'){
+    resetNet();
+    setLobbyStatus('Could not join: ' + describeNetError(result), true);
+    return;
+  }
+  NET.ready = true;
+  startHeartbeat();
+  render();
+}
+
+async function tryResumeNetSession(){
+  const s = loadSession();
+  if(!s) return false;
+  NET.ready = true;
+  NET.enabled = true; NET.code = s.code; NET.myPlayer = s.myPlayer; NET.token = s.token;
+  NET.version = s.version||0; NET.joined = !!s.joined; NET.link = 'down'; NET.peerLeft = false;
+  G = s.G;
+  if(s.undo && s.undo.snap){ UNDO.key = s.undo.key; UNDO.snap = s.undo.snap; UNDO.snapCore = s.undo.snapCore; UNDO.rng = s.undo.rng; }
+  NET.lastSent = JSON.stringify(G);
+  updateStatus();
+  startHeartbeat();
+  render();
+  recover(); // host: re-register the room id; guest: redial (retries with backoff until it works)
+  return true;
+}
+
+function resetNet(){
+  NET.ready = false;
+  stopHeartbeat();
+  if(NET.retryTimer){ clearTimeout(NET.retryTimer); NET.retryTimer = null; }
+  if(NET.pushTimer){ clearTimeout(NET.pushTimer); NET.pushTimer = null; }
+  const p = NET.peer, c = NET.conn;
+  NET.peer = null; NET.conn = null; NET.setupGen++;
+  safeClose(c); safeDestroy(p);
+  NET.enabled = false; NET.code = null; NET.myPlayer = null; NET.token = null; NET.version = 0;
+  NET.joined = false; NET.link = 'down'; NET.brokerOpen = false; NET.brokerPending = false;
+  NET.status = 'offline'; NET.peerLeft = false;
+  NET.turnInProgress = false; NET.forceNextPush = false; NET.lastSent = null;
+  NET.onWelcome = null; NET.onDialFail = null; NET.chunkBuf = null;
+}
+
+function leaveRoom(){
+  const conn = NET.conn, peer = NET.peer;
+  if(conn && conn.open) sendMsg({t:'bye'}, conn);
+  clearSession();
+  NET.conn = null; NET.peer = null; // keep them alive briefly so the goodbye gets delivered
+  resetNet();
+  setTimeout(()=>{ safeClose(conn); safeDestroy(peer); }, 300);
+  G = null;
+  render();
+}
+
+// ---- state sync (push side) ----
+function canPushNow(){
+  if(!NET.enabled || !G) return false;
+  if(NET.forceNextPush) return true;
+  if(NET.myPlayer===G.current){
+    NET.turnInProgress = true;
+    return true;
+  }
+  // G.current already flipped to the opponent (endTurn just ran), but this
+  // client was the one acting — it still needs to push that final handoff state.
+  return NET.turnInProgress;
+}
+
+function scheduleSyncPush(){
+  if(!canPushNow()) return;
+  if(NET.pushTimer) clearTimeout(NET.pushTimer);
+  NET.pushTimer = setTimeout(doSyncPush, 150);
+}
+
+function doSyncPush(){
+  NET.pushTimer = null;
+  if(!NET.enabled || !G || !NET.joined) return;
+  if(!canPushNow()) return;
+  const forced = NET.forceNextPush;
+  NET.forceNextPush = false;
+  const snap = JSON.stringify(G);
+  if(!forced && snap===NET.lastSent){
+    if(NET.myPlayer!==G.current) NET.turnInProgress = false;
+    return;
+  }
+  NET.version++;
+  NET.lastSent = snap;
+  saveSession();
+  // If the link is down the version still advances; the hello/welcome exchange hands
+  // our newer state over as soon as the connection comes back.
+  if(NET.link==='up' && !sendMsg({t:'state', v:NET.version, from:NET.myPlayer, state:G})){
+    onLinkLost();
+  }
+  if(NET.myPlayer!==G.current) NET.turnInProgress = false;
+}
+
+function setLobbyStatus(text, isError){
+  const el = document.getElementById('lobbyStatus');
+  if(!el) return;
+  el.textContent = text||'';
+  el.className = 'lobby-status' + (isError?' lobby-error':'');
+}
+
+function updateNetBanner(){
+  const banner = document.getElementById('netBanner');
+  const textEl = document.getElementById('netBannerText');
+  const copyBtn = document.getElementById('netCopyBtn');
+  if(!banner) return;
+  if(!NET.enabled){
+    banner.style.display = 'none';
+    return;
+  }
+  updateStatus();
+  banner.style.display = 'flex';
+  copyBtn.style.display = NET.code ? 'inline-block' : 'none';
+  banner.className = 'net-banner';
+  const you = NET.myPlayer===0 ? 'Player 1' : 'Player 2';
+  if(NET.status==='waiting-for-opponent'){
+    banner.classList.add('waiting');
+    textEl.innerHTML = `Room <code>${NET.code}</code> — waiting for your friend to join. You are <b>${you}</b>.`;
+  } else if(NET.status==='connected'){
+    banner.classList.add('connected');
+    textEl.innerHTML = `Room <code>${NET.code}</code> — connected. You are <b>${you}</b>.`;
+  } else if(NET.status==='connecting'){
+    banner.classList.add('waiting');
+    textEl.innerHTML = `Room <code>${NET.code}</code> — connecting… You are <b>${you}</b>.`;
+  } else if(NET.peerLeft){
+    banner.classList.add('error');
+    textEl.innerHTML = `Room <code>${NET.code}</code> — your opponent left the room. You can leave and start a new one.`;
+  } else {
+    banner.classList.add('error');
+    textEl.innerHTML = `Room <code>${NET.code}</code> — connection lost, reconnecting… (your game is saved on this device)`;
+  }
+}
+
+function showLobby(){
+  const root = document.getElementById('lobbyRoot');
+  if(root) root.style.display = 'flex';
+}
+function hideLobby(){
+  const root = document.getElementById('lobbyRoot');
+  if(root) root.style.display = 'none';
+}
+
+function freshTokenPool(){
+  // 36 singles (6 per color) + 6 duals
+  const singles = [];
+  COLORS.forEach(c=>{ for(let i=0;i<6;i++) singles.push({kind:'single', color:c}); });
+  const duals = DUAL_PAIRS.map(p=>({kind:'dual', colors:p.slice()}));
+  return {singles, duals};
+}
+
+function newGame(){
+  UI = { pendingSelection:null, pendingChoice:null, activeCard:null, cardPicks:[], message:'', coinKeepMode:null };
+  UNDO.key = null; UNDO.snap = null; UNDO.snapCore = null; UNDO.rng = null;
+  const {singles, duals} = freshTokenPool();
+  const singlesShuffled = shuffle(singles);
+
+  // group singles by color to pull 1-of-each twice
+  const byColor = {};
+  COLORS.forEach(c=>byColor[c]=[]);
+  singlesShuffled.forEach(t=>byColor[t.color].push(t));
+
+  const startTokens = COLORS.map(c=>byColor[c].pop());
+  const extraTokens = COLORS.map(c=>byColor[c].pop());
+  let bagTokens = [];
+  COLORS.forEach(c=> bagTokens = bagTokens.concat(byColor[c]));
+  bagTokens = bagTokens.concat(duals);
+  bagTokens = shuffle(bagTokens);
+
+  const board = {};
+  CELL_KEYS.forEach(k=>board[k]=[]);
+  const ring1 = CELL_KEYS.filter(k=>hexDist(parseKey(k))===1);
+  shuffle(ring1).forEach((k,i)=>{ board[k] = [startTokens[i]]; });
+
+  let deck = shuffle(buildDeck());
+
+  const players = [
+    {coins:3, hand:[], scored:[]},
+    {coins:3, hand:[], scored:[]}
+  ];
+  players[0].hand = [deck.pop(), deck.pop()];
+  players[1].hand = [deck.pop(), deck.pop()];
+
+  G = {
+    board, bagTokens, extraTokens, extraUsed:false,
+    deck, players,
+    gameId: rand().toString(36).slice(2,10), turnNo: 0, turnScoredAtStart: 0, // used by Undo Turn
+    current: 0, // placeholder; determineFirstPlayer() below sets the real value
+    turnPhase: 'draw', // draw -> place -> fireup(async) -> score -> (refresh happens on endTurn)
+    drawnToken: null,
+    coinSpentThisTurn: false,
+    endTriggered: false,
+    finalTurnFor: null, // player index who gets the final mini-turn
+    gameOver: false,
+    finalResult: null,
+    log: []
+  };
+  G.current = determineFirstPlayer();
+  addLog('Game started. ' + playerName(G.current) + ' goes first.', null);
+  render();
+}
+
+// Each player draws one random tile from the bag; whoever's tile ranks
+// higher on the Fire-Up Chart goes first. On a tie, both tiles go back
+// into the bag and both players draw again. Once there's a winner, both
+// drawn tiles are returned to the bag (and reshuffled) either way.
+function determineFirstPlayer(){
+  const rank = t => t.kind==='dual'
+    ? Math.max(FIRE_UP_ORDER.indexOf(t.colors[0]), FIRE_UP_ORDER.indexOf(t.colors[1]))
+    : FIRE_UP_ORDER.indexOf(t.color);
+  let triesLeft = 20;
+  while(triesLeft-- > 0){
+    if(G.bagTokens.length < 2){ return 0; }
+    const draw0 = G.bagTokens.pop();
+    const draw1 = G.bagTokens.pop();
+    const r0 = rank(draw0), r1 = rank(draw1);
+    const tied = r0===r1;
+    addLog('Player 1 drew '+tokenLabel(draw0)+', Player 2 drew '+tokenLabel(draw1)+
+      (tied ? ' — tied, drawing again.' : ' — '+playerName(r0>r1?0:1)+' goes first.'), null);
+    G.bagTokens.push(draw0, draw1);
+    G.bagTokens = shuffle(G.bagTokens);
+    if(!tied){ return r0>r1 ? 0 : 1; }
+  }
+  return 0;
+}
+
+function playerName(i){ return 'Player ' + (i+1); }
+function opp(i){ return i===0?1:0; }
+
+function addLog(text, playerIdx){
+  G.log.push({text, playerIdx});
+  if(G.log.length>60) G.log.shift();
+}
+
+// ---------- Bag / deck helpers ----------
+function drawOneFromBag(){
+  if(G.bagTokens.length===0){
+    if(!G.extraUsed && G.extraTokens.length>0){
+      G.bagTokens = shuffle(G.extraTokens.slice());
+      G.extraTokens = [];
+      G.extraUsed = true;
+      addLog('The bag ran dry — the 6 reserve dragons are added back in!', null);
+    } else {
+      return null;
+    }
+  }
+  const tok = G.bagTokens.pop();
+  if(G.bagTokens.length===0){
+    if(!G.endTriggered){
+      G.endTriggered = true;
+      addLog('The dragon bag is empty — this triggers the end of the game!', null);
+    }
+  }
+  return tok;
+}
+
+function drawShopCard(){
+  if(G.deck.length===0) return null;
+  const card = G.deck.pop();
+  if(G.deck.length===0 && !G.endTriggered){
+    G.endTriggered = true;
+    addLog('The shop deck is empty — this triggers the end of the game!', null);
+  }
+  return card;
+}
+
+function tokenLabel(t){
+  if(!t) return '';
+  return t.kind==='dual' ? (DRAGON[t.colors[0]].emoji+DRAGON[t.colors[1]].emoji) : DRAGON[t.color].emoji;
+}
+function tokenColors(t){
+  return t.kind==='dual' ? t.colors.slice() : [t.color];
+}
+function topToken(hexKey){
+  const stack = G.board[hexKey];
+  return stack.length ? stack[stack.length-1] : null;
+}
+
+// ---------- Selection helpers (Promise based) ----------
+function selectHex(filterFn, instructionHtml, skipLabel){
+  return new Promise(resolve=>{
+    UI.pendingSelection = { filterFn, resolve, skipLabel: skipLabel||null };
+    UI.message = instructionHtml;
+    render();
+  });
+}
+function selectChoice(options, instructionHtml){
+  // options: array of {label, value}
+  return new Promise(resolve=>{
+    UI.pendingChoice = { options, resolve };
+    UI.message = instructionHtml;
+    render();
+  });
+}
+function clearPending(){
+  UI.pendingSelection = null;
+  UI.pendingChoice = null;
+  UI.message = '';
+}
+
+// ---------- Ability logic ----------
+async function fireAbility(color, hexKey, actorIdx){
+  if(color==='bread'){
+    const tok = drawOneFromBag();
+    if(!tok){ addLog('No dragons left to draw for Bread.', actorIdx); return; }
+    addLog(playerName(actorIdx)+"'s Bread dragon pulled another " + tokenLabel(tok) + ' from the bag.', actorIdx);
+    const dest = await selectHex(k=>G.board[k].length<3, 'Bread ability: place the new '+tokenLabel(tok)+' dragon on any hex with fewer than 3 tokens.');
+    G.board[dest].push(tok);
+    render();
+    const fireIt = await selectChoice([{label:'Fire it up', value:'yes'},{label:'Skip', value:'no'}], 'Fire up the newly placed '+tokenLabel(tok)+' dragon?');
+    if(fireIt==='yes'){
+      await resolveTokenFire(tok, dest, actorIdx);
+    }
+    clearPending();
+    return;
+  }
+  if(color==='crystal'){
+    const drawn = [];
+    for(let i=0;i<3;i++){
+      const t = drawOneFromBag();
+      if(t) drawn.push(t);
+    }
+    if(drawn.length===0){ addLog('No dragons left in the bag for Crystal.', actorIdx); return; }
+    addLog(playerName(actorIdx)+"'s Crystal dragon pulled "+drawn.length+' dragon(s) from the bag.', actorIdx);
+    let chosenIdx = 0;
+    if(drawn.length>1){
+      const opts = drawn.map((t,i)=>({label:tokenLabel(t), value:i}));
+      chosenIdx = await selectChoice(opts, 'Crystal ability: choose 1 of these dragons to place. The rest return to the bag.');
+    }
+    const chosen = drawn[chosenIdx];
+    const rest = drawn.filter((_,i)=>i!==chosenIdx);
+    const dest = await selectHex(k=>G.board[k].length<3, 'Place the chosen '+tokenLabel(chosen)+' dragon on any hex with fewer than 3 tokens.');
+    G.board[dest].push(chosen);
+    G.bagTokens = shuffle(G.bagTokens.concat(rest));
+    addLog(playerName(actorIdx)+' placed '+tokenLabel(chosen)+' and returned '+rest.length+' dragon(s) to the bag.', actorIdx);
+    clearPending();
+    render();
+    return;
+  }
+  if(color==='meat'){
+    const adj = neighborsOf(hexKey).filter(k=>G.board[k].length>0);
+    if(adj.length===0){ addLog('No adjacent dragons for Meat to move.', actorIdx); return; }
+    const src = await selectHex(k=>adj.includes(k), 'Meat ability: choose an adjacent dragon to move.');
+    const dest = await selectHex(k=>k!==src && G.board[k].length<3, 'Now choose where to move that dragon (any hex with room, even this one).');
+    const t = G.board[src].pop();
+    G.board[dest].push(t);
+    addLog(playerName(actorIdx)+"'s Meat dragon moved a "+tokenLabel(t)+' dragon.', actorIdx);
+    clearPending();
+    render();
+    return;
+  }
+  if(color==='iron'){
+    for(let round=0; round<2; round++){
+      const adj = neighborsOf(hexKey).filter(k=>G.board[k].length>0);
+      if(adj.length===0) break;
+      const label = round===0 ? 'Iron ability: click an adjacent dragon on the board to move it 1 space, or skip.' : 'Move a second adjacent dragon 1 space, or skip.';
+      const src = await selectHex(k=>adj.includes(k), label, 'Skip');
+      if(src===null) break;
+      const srcNeighbors = neighborsOf(src).filter(k=>G.board[k].length<3);
+      if(srcNeighbors.length===0){ addLog('That dragon has nowhere to move.', actorIdx); continue; }
+      const dest = await selectHex(k=>srcNeighbors.includes(k), 'Click an adjacent hex to move it into.');
+      const t = G.board[src].pop();
+      G.board[dest].push(t);
+      addLog(playerName(actorIdx)+"'s Iron dragon shifted a "+tokenLabel(t)+' dragon one space.', actorIdx);
+      render();
+    }
+    clearPending();
+    return;
+  }
+  if(color==='potion'){
+    const withTokens = CELL_KEYS.filter(k=>G.board[k].length>0);
+    const first = await selectHex(k=>withTokens.includes(k), 'Potion ability: choose the first dragon to swap.');
+    const second = await selectHex(k=>withTokens.includes(k) && k!==first, 'Choose the second dragon to swap with.');
+    const tA = G.board[first].pop();
+    const tB = G.board[second].pop();
+    G.board[first].push(tB);
+    G.board[second].push(tA);
+    addLog(playerName(actorIdx)+"'s Potion dragon swapped two dragons' positions.", actorIdx);
+    clearPending();
+    render();
+    return;
+  }
+  if(color==='plant'){
+    const adj = neighborsOf(hexKey).filter(k=>G.board[k].length>0);
+    if(adj.length===0){ addLog('No adjacent dragons for Plant to fire.', actorIdx); return; }
+    const target = await selectHex(k=>adj.includes(k), 'Plant ability: choose an adjacent dragon to fire up in its place.');
+    const t = topToken(target);
+    let chosenColor = t.kind==='single' ? t.color : null;
+    if(t.kind==='dual'){
+      const opts = t.colors.map(c=>({label:DRAGON[c].emoji+' '+DRAGON[c].name, value:c}));
+      chosenColor = await selectChoice(opts, 'That is a dual dragon — choose which ability to fire.');
+    }
+    addLog(playerName(actorIdx)+"'s Plant dragon fired up a "+DRAGON[chosenColor].name+' dragon.', actorIdx);
+    clearPending();
+    await fireAbility(chosenColor, target, actorIdx);
+    return;
+  }
+}
+
+async function resolveTokenFire(token, hexKey, actorIdx){
+  let color = token.kind==='single' ? token.color : null;
+  if(token.kind==='dual'){
+    const opts = token.colors.map(c=>({label:DRAGON[c].emoji+' '+DRAGON[c].name, value:c}));
+    color = await selectChoice(opts, 'This is a dual dragon — choose which of its 2 abilities to fire.');
+    clearPending();
+  }
+  await fireAbility(color, hexKey, actorIdx);
+}
+
+// ---------- Turn flow ----------
+async function doDraw(){
+  if(!isMyTurn()) return;
+  if(G.turnPhase!=='draw') return;
+  const tok = drawOneFromBag();
+  if(!tok){
+    addLog('The bag is empty — nothing to draw.', G.current);
+    G.turnPhase = 'score';
+    render();
+    return;
+  }
+  G.drawnToken = tok;
+  G.turnPhase = 'place';
+  addLog(playerName(G.current)+' drew a '+tokenLabel(tok)+' dragon.', G.current);
+  render();
+}
+
+async function onBoardHexClicked(hexKey){
+  if(!isMyTurn()) return;
+  if(UI.coinKeepMode) return;
+  // priority: pending selection (used inside async ability flows)
+  if(UI.pendingSelection){
+    if(UI.pendingSelection.filterFn(hexKey)){
+      const resolve = UI.pendingSelection.resolve;
+      UI.pendingSelection = null;
+      resolve(hexKey);
+    }
+    return;
+  }
+  if(G.turnPhase==='place' && G.drawnToken){
+    if(G.board[hexKey].length<3){
+      G.board[hexKey].push(G.drawnToken);
+      const placedToken = G.drawnToken;
+      const placedHex = hexKey;
+      G.drawnToken = null;
+      render();
+      const canFire = true;
+      if(canFire){
+        const choice = await selectChoice([{label:'Fire up ability', value:'yes'},{label:'Skip', value:'no'}], 'Fire up your newly placed '+tokenLabel(placedToken)+' dragon?');
+        clearPending();
+        if(choice==='yes'){
+          await resolveTokenFire(placedToken, placedHex, G.current);
+        }
+      }
+      G.turnPhase = 'score';
+      checkGameStillGoing();
+      render();
+    }
+    return;
+  }
+  if(G.turnPhase==='score' && UI.activeCard){
+    toggleCardPick(hexKey);
+  }
+}
+
+function checkGameStillGoing(){
+  // nothing extra needed here now; end handling occurs on endTurn
+}
+
+function toggleCardPick(hexKey){
+  if(G.board[hexKey].length===0) return;
+  const idx = UI.cardPicks.indexOf(hexKey);
+  if(idx>=0){ UI.cardPicks.splice(idx,1); }
+  else {
+    if(UI.cardPicks.length>=3) return;
+    UI.cardPicks.push(hexKey);
+  }
+  if(UI.cardPicks.length===3){
+    tryConfirmCardMatch();
+  } else {
+    render();
+  }
+}
+
+function shapeTriples(shape){
+  return shape==='line' ? LINE_TRIPLES : TRIANGLE_TRIPLES;
+}
+
+function setsEqual(a,b){
+  const sa = a.slice().sort();
+  const sb = b.slice().sort();
+  return sa.length===sb.length && sa.every((v,i)=>v===sb[i]);
+}
+
+function patternMatches(pattern, tokensArr){
+  // tokensArr: array of 3 tokens (top of stack). Try all color assignments (duals have 2 options)
+  const options = tokensArr.map(t=>tokenColors(t));
+  const results = [];
+  function rec(i, chosen){
+    if(i===options.length){ results.push(chosen.slice()); return; }
+    options[i].forEach(c=>{ chosen.push(c); rec(i+1, chosen); chosen.pop(); });
+  }
+  rec(0, []);
+  const wantSorted = pattern.slice().sort();
+  return results.some(r=>{
+    const rs = r.slice().sort();
+    return rs.length===wantSorted.length && rs.every((v,i)=>v===wantSorted[i]);
+  });
+}
+
+function tryConfirmCardMatch(){
+  const card = UI.activeCard;
+  const picks = UI.cardPicks;
+  const validShapeSet = shapeTriples(card.shape).some(triple=>setsEqual(triple, picks));
+  if(!validShapeSet){
+    UI.message = 'Those 3 hexes don\'t form the required '+(card.shape==='line'?'straight row':'triangle cluster')+'. Try again.';
+    UI.cardPicks = [];
+    render();
+    return;
+  }
+  if(picks.some(k=>G.board[k].length===0)){
+    UI.message = 'All 3 hexes need at least one dragon on them.';
+    UI.cardPicks = [];
+    render();
+    return;
+  }
+  const tokensArr = picks.map(k=>topToken(k));
+  if(!patternMatches(card.pattern, tokensArr)){
+    UI.message = 'Those dragons don\'t match this card\'s pattern. Try again.';
+    UI.cardPicks = [];
+    render();
+    return;
+  }
+  // success!
+  const p = G.players[G.current];
+  p.hand = p.hand.filter(c=>c.id!==card.id);
+  p.scored.push(card);
+  addLog(playerName(G.current)+' scored a card worth '+card.rep+' reputation!', G.current);
+  UI.activeCard = null;
+  UI.cardPicks = [];
+  UI.message = '';
+  render();
+}
+
+function findHint(card){
+  const triples = shapeTriples(card.shape);
+  for(const triple of triples){
+    if(triple.some(k=>G.board[k].length===0)) continue;
+    const tokensArr = triple.map(k=>topToken(k));
+    if(patternMatches(card.pattern, tokensArr)) return triple;
+  }
+  return null;
+}
+
+async function spendCoin(){
+  if(!isMyTurn()) return;
+  if(G.coinSpentThisTurn) return;
+  const p = G.players[G.current];
+  if(p.coins<=0) return;
+  p.coins -= 1;
+  G.coinSpentThisTurn = true;
+  const drawn = [];
+  for(let i=0;i<2;i++){ const c = drawShopCard(); if(c) drawn.push(c); }
+  p.hand = p.hand.concat(drawn);
+  addLog(playerName(G.current)+' spent a coin to draw '+drawn.length+' shop card(s).', G.current);
+  render();
+  if(p.hand.length>2){
+    const keepCount = p.hand.length-2;
+    UI.message = 'Choose '+keepCount+' card(s) to keep — the rest go to the bottom of the deck.';
+    UI.coinKeepMode = { keepCount, picked: [] };
+    render();
+  }
+}
+
+function coinKeepPick(cardId){
+  if(!isMyTurn()) return;
+  if(!UI.coinKeepMode) return;
+  const idx = UI.coinKeepMode.picked.indexOf(cardId);
+  if(idx>=0){ UI.coinKeepMode.picked.splice(idx,1); }
+  else if(UI.coinKeepMode.picked.length<UI.coinKeepMode.keepCount){ UI.coinKeepMode.picked.push(cardId); }
+  if(UI.coinKeepMode.picked.length===UI.coinKeepMode.keepCount){
+    const p = G.players[G.current];
+    const keep = p.hand.filter(c=>UI.coinKeepMode.picked.includes(c.id));
+    const discard = p.hand.filter(c=>!UI.coinKeepMode.picked.includes(c.id));
+    p.hand = keep;
+    G.deck = discard.concat(G.deck); // discard to bottom (deck.pop() draws from end, so bottom = front)
+    addLog(playerName(G.current)+' kept '+keep.length+' card(s) and returned '+discard.length+' to the bottom of the deck.', G.current);
+    UI.coinKeepMode = null;
+  }
+  render();
+}
+
+function endTurn(){
+  if(!isMyTurn()) return;
+  if(UI.coinKeepMode) return; // must finish coin choice first
+  const isFinal = G.finalTurnFor===G.current;
+  if(isFinal){
+    finishGame();
+    return;
+  }
+  // refresh phase
+  const p = G.players[G.current];
+  while(p.hand.length<2){
+    const c = drawShopCard();
+    if(!c) break;
+    p.hand.push(c);
+  }
+  const wasTriggeredThisTurn = G.endTriggered && G.finalTurnFor===null;
+  if(wasTriggeredThisTurn){
+    G.finalTurnFor = opp(G.current);
+    addLog('End triggered! '+playerName(G.finalTurnFor)+' gets one final chance to score.', null);
+  }
+  G.current = opp(G.current);
+  G.turnNo = (G.turnNo||0) + 1;
+  G.turnScoredAtStart = G.players[G.current].scored.length;
+  G.coinSpentThisTurn = false;
+  G.cardPicksReset = true;
+  UI.activeCard = null;
+  UI.cardPicks = [];
+  if(G.finalTurnFor===G.current){
+    G.turnPhase = 'score';
+    G.drawnToken = null;
+  } else {
+    G.turnPhase = 'draw';
+    G.drawnToken = null;
+  }
+  render();
+}
+
+function finishGame(){
+  G.gameOver = true;
+  const totals = G.players.map(p=>{
+    const rep = p.scored.reduce((s,c)=>s+c.rep,0) + p.coins;
+    return {rep, cards:p.scored.length, coins:p.coins};
+  });
+  let winner;
+  if(totals[0].rep>totals[1].rep) winner=0;
+  else if(totals[1].rep>totals[0].rep) winner=1;
+  else if(totals[0].cards>totals[1].cards) winner=0;
+  else if(totals[1].cards>totals[0].cards) winner=1;
+  else winner=-1;
+  G.finalResult = {totals, winner};
+  addLog('Game over! '+ (winner===-1?'A dual victory — it\'s a tie!':playerName(winner)+' wins!'), null);
+  render();
+}
+
+// ---------- Undo Turn ----------
+// At the start of each of your turns the game keeps a private snapshot (state + random-number state).
+// "Undo Turn" rewinds your current turn to that snapshot: board, hands, coins, bag and deck all return,
+// any half-finished ability prompt is cancelled, and the opponent's screen follows along in online play.
+// It only covers the turn you are in; once you press End Turn it can't be taken back.
+function undoKey(){ return G ? (G.gameId||'') + ':' + (G.turnNo||0) + ':' + G.current : null; }
+function coreJson(){ return JSON.stringify(Object.assign({}, G, {log:null})); }
+
+// True only when no action has been taken yet this turn, so the snapshot really is the turn start.
+function isPristineTurnStart(){
+  if(G.gameOver || G.coinSpentThisTurn || G.drawnToken) return false;
+  if(G.finalTurnFor===G.current){
+    return G.turnPhase==='score' && G.players[G.current].scored.length===(G.turnScoredAtStart||0);
+  }
+  return G.turnPhase==='draw';
+}
+
+function maybeCaptureUndo(){
+  if(!G || !isMyTurn()) return;
+  const key = undoKey();
+  if(UNDO.key===key) return;
+  UNDO.key = key;
+  if(isPristineTurnStart()){
+    UNDO.snap = JSON.stringify(G);
+    UNDO.snapCore = coreJson();
+    UNDO.rng = RNG_STATE;
+  } else {
+    // arrived mid-turn without a saved snapshot: there is nothing safe to rewind to
+    UNDO.snap = null; UNDO.snapCore = null; UNDO.rng = null;
+  }
+  if(NET.enabled) saveSession();
+}
+
+function canUndo(){
+  return !!G && isMyTurn() && !G.gameOver && !!UNDO.snap && UNDO.key===undoKey() && coreJson()!==UNDO.snapCore;
+}
+
+function undoTurn(){
+  if(!canUndo()) return;
+  const who = G.current;
+  G = JSON.parse(UNDO.snap);
+  RNG_STATE = UNDO.rng;
+  // drop any half-finished prompt; its pending promise is never resolved, so that ability flow simply ends
+  UI = { pendingSelection:null, pendingChoice:null, activeCard:null, cardPicks:[], message:'', coinKeepMode:null };
+  addLog(playerName(who)+' undid their turn and is starting it over.', who);
+  render();
+}
+
+// ---------- Rendering ----------
+function render(){
+  renderStatus();
+  renderInstruction();
+  renderBoard();
+  renderHands();
+  renderScored();
+  renderLog();
+  renderOverlay();
+  renderOrderChart();
+}
+
+function renderOrderChart(){
+  const el = document.getElementById('orderChartRow');
+  if(el.dataset.done) return;
+  el.dataset.done = '1';
+  el.innerHTML = FIRE_UP_ORDER.map((c,i)=>`<span>${DRAGON[c].emoji}</span>`+(i<FIRE_UP_ORDER.length-1?'<span class="arrow">→</span>':'')).join('');
+}
+
+function renderStatus(){
+  const chip = document.getElementById('turnChip');
+  chip.className = 'turn-chip p'+G.current;
+  let turnTxt = playerName(G.current)+"'s turn";
+  if(NET.enabled && NET.joined){
+    turnTxt += (NET.myPlayer===G.current ? ' (you)' : ' (opponent)');
+  }
+  document.getElementById('turnLabel').textContent = turnTxt;
+  let phaseTxt = '';
+  if(G.gameOver) phaseTxt = 'Game over';
+  else if(G.finalTurnFor===G.current) phaseTxt = 'Final chance — score only';
+  else if(G.turnPhase==='draw') phaseTxt = 'Draw phase';
+  else if(G.turnPhase==='place') phaseTxt = 'Place & fire phase';
+  else if(G.turnPhase==='score') phaseTxt = 'Score phase';
+  document.getElementById('phaseLabel').textContent = phaseTxt;
+
+  const coinSummary = document.getElementById('coinSummary');
+  coinSummary.innerHTML = `P1: ${'<span class="coin"></span>'.repeat(G.players[0].coins)} &nbsp; P2: ${'<span class="coin"></span>'.repeat(G.players[1].coins)}`;
+}
+
+function renderInstruction(){
+  const box = document.getElementById('instructionBox');
+  if(NET.enabled && !NET.joined){
+    box.innerHTML = NET.status==='waiting-for-opponent'
+      ? `Share room code <strong>${NET.code}</strong> with your friend. The game will start once they join.`
+      : `Setting up room <strong>${NET.code}</strong>…`;
+    return;
+  }
+  if(NET.enabled && !G.gameOver && !isMyTurn()){
+    box.innerHTML = `Waiting for <strong>${playerName(G.current)}</strong> to take their turn…`;
+    return;
+  }
+  if(UI.pendingChoice){
+    box.innerHTML = (UI.message||'') + `<div class="opts" id="choiceOpts"></div>`;
+    const optsEl = document.getElementById('choiceOpts');
+    UI.pendingChoice.options.forEach((opt, i)=>{
+      const b = document.createElement('button');
+      b.className = 'btn-gold btn-small';
+      b.textContent = opt.label;
+      b.addEventListener('click', ()=>{
+        const resolve = UI.pendingChoice.resolve;
+        UI.pendingChoice = null;
+        resolve(opt.value);
+      });
+      optsEl.appendChild(b);
+    });
+    return;
+  }
+  if(UI.pendingSelection && UI.pendingSelection.skipLabel){
+    box.innerHTML = (UI.message||'') + `<div class="opts" id="skipOpts"></div>`;
+    const optsEl = document.getElementById('skipOpts');
+    const b = document.createElement('button');
+    b.className = 'btn-ghost btn-small';
+    b.textContent = UI.pendingSelection.skipLabel;
+    b.addEventListener('click', ()=>{
+      const resolve = UI.pendingSelection.resolve;
+      UI.pendingSelection = null;
+      resolve(null);
+    });
+    optsEl.appendChild(b);
+    return;
+  }
+  if(UI.message){
+    box.innerHTML = UI.message;
+    return;
+  }
+  if(G.gameOver){ box.innerHTML = 'The game has ended. See the results above, or start a new game.'; return; }
+  const isFinal = G.finalTurnFor===G.current;
+  if(isFinal){
+    box.innerHTML = `<strong>${playerName(G.current)}</strong>: this is your final chance! Score any cards you can, optionally spend a coin, then click <em>End Game</em>.`;
+    return;
+  }
+  if(G.turnPhase==='draw'){
+    box.innerHTML = `<strong>${playerName(G.current)}</strong>: click <em>Draw Dragon</em> to pull a random dragon token from the bag.`;
+  } else if(G.turnPhase==='place'){
+    box.innerHTML = `<strong>${playerName(G.current)}</strong>: you drew a ${tokenLabel(G.drawnToken)} dragon — click any hex with fewer than 3 tokens to place it.`;
+  } else if(G.turnPhase==='score'){
+    box.innerHTML = `<strong>${playerName(G.current)}</strong>: click one of your shop cards on the right, then click 3 hexes on the board to try to match it. When ready, click <em>End Turn</em>.`;
+  }
+}
+
+function renderChoiceButtons(){
+  if(!UI.pendingChoice) return '';
+  return '';
+}
+
+function renderBoard(){
+  const svg = document.getElementById('board');
+  let html = '';
+  // draw cells
+  CELL_KEYS.forEach(k=>{
+    const {x,y} = hexToPixel(k);
+    let cls = 'hexcell';
+    let selectable = false;
+    const myTurnNow = isMyTurn();
+    if(myTurnNow && UI.pendingSelection && UI.pendingSelection.filterFn(k)) selectable = true;
+    if(myTurnNow && !UI.pendingSelection && G.turnPhase==='place' && G.drawnToken && G.board[k].length<3) selectable = true;
+    if(myTurnNow && !UI.pendingSelection && G.turnPhase==='score' && UI.activeCard) selectable = true;
+    if(selectable) cls += ' selectable';
+    if(UI.cardPicks && UI.cardPicks.includes(k)) cls += ' picked';
+    html += `<polygon class="${cls}" points="${hexCorners(x,y)}" data-key="${k}"></polygon>`;
+  });
+  // draw tokens
+  CELL_KEYS.forEach(k=>{
+    const stack = G.board[k];
+    if(!stack.length) return;
+    const {x,y} = hexToPixel(k);
+    stack.forEach((t,i)=>{
+      const offsetY = (i - (stack.length-1)/2) * 16;
+      const cx = x, cy = y + offsetY - (stack.length-1)*2;
+      const colors = tokenColors(t);
+      const fill = colors.length===2 ? colors.map(c=>DRAGON[c].color) : [DRAGON[colors[0]].color, DRAGON[colors[0]].color];
+      html += `<circle class="token-circle" cx="${cx}" cy="${cy}" r="14" fill="${fill[0]}"></circle>`;
+      if(colors.length===2){
+        html += `<path class="dual-arc" d="M ${cx} ${cy-14} A 14 14 0 0 1 ${cx} ${cy+14}" fill="${fill[1]}" stroke="#20160c" stroke-width="1.5"></path>`;
+      }
+      html += `<text class="token-emoji" x="${cx}" y="${cy+1}">${t.kind==='dual' ? '' : DRAGON[t.color].emoji}</text>`;
+      if(t.kind==='dual'){
+        html += `<text class="token-emoji" x="${cx-6}" y="${cy+1}" font-size="10">${DRAGON[t.colors[0]].emoji}</text>`;
+        html += `<text class="token-emoji" x="${cx+6}" y="${cy+1}" font-size="10">${DRAGON[t.colors[1]].emoji}</text>`;
+      }
+    });
+  });
+  svg.innerHTML = html;
+  svg.querySelectorAll('polygon.hexcell').forEach(p=>{
+    p.addEventListener('click', ()=>onBoardHexClicked(p.dataset.key));
+  });
+}
+
+function cardHtml(card, faceUp, extra){
+  if(!faceUp){
+    return `<div class="card back">🂠</div>`;
+  }
+  const rows = card.shape==='line'
+    ? `<div class="rowline">${card.pattern.map(c=>`<span class="rowicon">${DRAGON[c].emoji}</span>`).join('')}</div>`
+    : `<div class="rowline">${card.pattern.slice(0,2).map(c=>`<span class="rowicon">${DRAGON[c].emoji}</span>`).join('')}</div><div class="rowline"><span class="rowicon">${DRAGON[card.pattern[2]].emoji}</span></div>`;
+  return `<div class="card ${extra||''}" data-cardid="${card.id}">
+      <div class="shapebox">${rows}<div class="shapelabel">${card.shape==='line'?'Row':'Cluster'}</div></div>
+      <div class="rep">★ ${card.rep}</div>
+    </div>`;
+}
+
+function renderHands(){
+  const myIndex = NET.enabled ? NET.myPlayer : G.current;
+  const mine = G.players[myIndex];
+  const theirs = G.players[opp(myIndex)];
+  const handRow = document.getElementById('handRow');
+  const inCoinKeep = !!UI.coinKeepMode;
+  handRow.innerHTML = mine.hand.map(c=>{
+    let extra = UI.activeCard && UI.activeCard.id===c.id ? 'active' : '';
+    if(inCoinKeep && UI.coinKeepMode.picked.includes(c.id)) extra += ' active';
+    return cardHtml(c, true, extra);
+  }).join('') || '<span style="color:var(--text-muted); font-size:0.85rem;">No cards</span>';
+  handRow.querySelectorAll('.card').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(!isMyTurn()) return;
+      const id = el.dataset.cardid;
+      if(UI.coinKeepMode){ coinKeepPick(id); return; }
+      if(UI.pendingSelection || UI.pendingChoice) return;
+      if(G.turnPhase!=='score' && !(G.finalTurnFor===G.current)) return;
+      const card = mine.hand.find(c=>c.id===id);
+      if(UI.activeCard && UI.activeCard.id===id){ UI.activeCard=null; UI.cardPicks=[]; }
+      else { UI.activeCard = card; UI.cardPicks = []; }
+      render();
+    });
+  });
+
+  const oppRow = document.getElementById('oppHandRow');
+  oppRow.innerHTML = theirs.hand.map(()=>cardHtml(null,false)).join('') || '<span style="color:var(--text-muted); font-size:0.85rem;">No cards</span>';
+}
+
+function renderScored(){
+  [0,1].forEach(i=>{
+    const p = G.players[i];
+    const el = document.getElementById('p'+i+'scored');
+    el.innerHTML = p.scored.map(c=>`<span class="mini-card">${c.pattern.map(x=>DRAGON[x].emoji).join('')} ★${c.rep}</span>`).join('') || '<span style="color:var(--text-muted); font-size:0.8rem;">None yet</span>';
+    const total = p.scored.reduce((s,c)=>s+c.rep,0);
+    document.getElementById('p'+i+'total').textContent = '— ' + total + ' rep';
+  });
+}
+
+function renderLog(){
+  const box = document.getElementById('logBox');
+  box.innerHTML = G.log.slice().reverse().map(l=>`<div class="${l.playerIdx!==null?('me'+l.playerIdx):''}">${l.text}</div>`).join('');
+}
+
+function renderOverlay(){
+  const root = document.getElementById('overlayRoot');
+  if(!G.gameOver){ root.innerHTML=''; return; }
+  const r = G.finalResult;
+  const winTxt = r.winner===-1 ? 'Dual Victory!' : playerName(r.winner)+' wins!';
+  root.innerHTML = `<div class="overlay"><div class="box">
+    <h2>${winTxt}</h2>
+    <div class="finalscore">${r.totals[0].rep} — ${r.totals[1].rep}</div>
+    <div style="font-size:0.9rem; color:#5a4a30;">Player 1: ${r.totals[0].cards} cards scored, ${r.totals[0].coins} coin(s) left<br>
+    Player 2: ${r.totals[1].cards} cards scored, ${r.totals[1].coins} coin(s) left</div>
+    <div style="margin-top:16px;"><button class="btn-primary" id="playAgainBtn">${NET.enabled ? 'Rematch' : 'Play Again'}</button></div>
+  </div></div>`;
+  document.getElementById('playAgainBtn').addEventListener('click', (ev)=>{
+    if(!NET.enabled){ newGame(); return; }
+    if(NET.myPlayer===0){
+      // the host owns the room, so only the host actually starts the rematch (no two-sided race)
+      NET.forceNextPush = true;
+      newGame();
+    } else {
+      // the guest asks the host to start it
+      const btn = ev.currentTarget;
+      sendMsg({t:'rematch'});
+      btn.disabled = true;
+      btn.textContent = 'Waiting for host…';
+      setTimeout(()=>{ if(document.body.contains(btn)){ btn.disabled = false; btn.textContent = 'Rematch'; } }, 4000);
+    }
+  });
+}
+
+// ---------- Bottom controls injection ----------
+function renderControls(){
+  // Injected once; visibility toggled in updateControlsState
+}
+
+// We add a persistent control bar under the instruction box via direct DOM injection once.
+function setupControlBar(){
+  const bar = document.createElement('div');
+  bar.style.display='flex';
+  bar.style.gap='10px';
+  bar.style.flexWrap='wrap';
+  bar.style.margin = '4px 0 16px 0';
+  bar.id = 'controlBar';
+  bar.innerHTML = `
+    <button class="btn-primary" id="drawBtn">Draw Dragon</button>
+    <button class="btn-gold" id="spendCoinBtn">Spend a Coin</button>
+    <button class="btn-ghost" id="undoBtn" title="Rewind your current turn back to its start (Ctrl/Cmd+Z)">&#8630; Undo Turn</button>
+    <button class="btn-ghost" id="endTurnBtn">End Turn</button>
+  `;
+  const instrBox = document.getElementById('instructionBox');
+  instrBox.parentNode.insertBefore(bar, instrBox);
+  document.getElementById('drawBtn').addEventListener('click', doDraw);
+  document.getElementById('spendCoinBtn').addEventListener('click', spendCoin);
+  document.getElementById('undoBtn').addEventListener('click', undoTurn);
+  document.getElementById('endTurnBtn').addEventListener('click', endTurn);
+}
+
+const origRender = render;
+render = function(){
+  updateNetBanner();
+  if(!G){
+    showLobby();
+    return;
+  }
+  hideLobby();
+  maybeCaptureUndo();
+  origRender();
+  updateControlBar();
+  updateHeaderButton();
+  scheduleSyncPush();
+};
+
+function updateHeaderButton(){
+  const btn = document.getElementById('newGameBtn');
+  if(!btn) return;
+  btn.textContent = NET.enabled ? 'Leave Room' : 'New Game';
+}
+
+function updateControlBar(){
+  const drawBtn = document.getElementById('drawBtn');
+  const spendBtn = document.getElementById('spendCoinBtn');
+  const endBtn = document.getElementById('endTurnBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  if(!drawBtn) return;
+  const myTurn = isMyTurn();
+  const isFinal = G.finalTurnFor===G.current;
+  drawBtn.style.display = (myTurn && !isFinal && G.turnPhase==='draw' && !G.gameOver) ? 'inline-block':'none';
+  spendBtn.disabled = !myTurn || G.gameOver || G.coinSpentThisTurn || G.players[G.current].coins<=0 || !!UI.pendingSelection || !!UI.pendingChoice || !!UI.coinKeepMode;
+  spendBtn.style.display = (G.gameOver || (NET.enabled && !myTurn)) ? 'none':'inline-block';
+  const canEnd = myTurn && !G.gameOver && !UI.pendingSelection && !UI.pendingChoice && !UI.coinKeepMode && (isFinal ? true : (G.turnPhase==='score'));
+  endBtn.style.display = (G.gameOver || (NET.enabled && !myTurn)) ? 'none':'inline-block';
+  endBtn.disabled = !canEnd;
+  endBtn.textContent = isFinal ? 'End Game' : 'End Turn';
+  undoBtn.style.display = (G.gameOver || (NET.enabled && !myTurn)) ? 'none':'inline-block';
+  undoBtn.disabled = !canUndo();
+}
+
+// ---------- Init ----------
+function setupLobbyUI(){
+  document.getElementById('lobbyLocalBtn').addEventListener('click', ()=>{
+    setLobbyStatus('');
+    newGame();
+  });
+  document.getElementById('lobbyCreateBtn').addEventListener('click', ()=>{
+    hostCreateRoom();
+  });
+  document.getElementById('lobbyJoinBtn').addEventListener('click', ()=>{
+    const input = document.getElementById('lobbyJoinInput');
+    joinRoomWithCode(input.value);
+  });
+  document.getElementById('lobbyJoinInput').addEventListener('keydown', (e)=>{
+    if(e.key==='Enter'){
+      joinRoomWithCode(document.getElementById('lobbyJoinInput').value);
+    }
+  });
+}
+
+function setupNetBannerUI(){
+  document.getElementById('netCopyBtn').addEventListener('click', ()=>{
+    if(!NET.code) return;
+    const btn = document.getElementById('netCopyBtn');
+    const done = ()=>{ const old=btn.textContent; btn.textContent='Copied!'; setTimeout(()=>{ btn.textContent = old==='Copied!'?'Copy code':old; }, 1200); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(NET.code).then(done).catch(done);
+    } else {
+      done();
+    }
+  });
+}
+
+document.getElementById('newGameBtn').addEventListener('click', ()=>{
+  if(NET.enabled){
+    leaveRoom();
+  } else {
+    newGame();
+  }
+});
+document.addEventListener('keydown', (e)=>{
+  if(!(e.ctrlKey||e.metaKey) || e.shiftKey || e.altKey || (e.key!=='z' && e.key!=='Z')) return;
+  if(/^(input|textarea|select)$/i.test((e.target&&e.target.tagName)||'')) return;
+  if(canUndo()){ e.preventDefault(); undoTurn(); }
+});
+setupControlBar();
+setupLobbyUI();
+setupNetBannerUI();
+
+(async function init(){
+  const resumed = await tryResumeNetSession();
+  if(!resumed){
+    render(); // shows the lobby, since G is still null
+  }
+})();
+
+})();
+</script>
+</body>
+</html>
