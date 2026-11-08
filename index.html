@@ -533,10 +533,22 @@ function buildDeck(){
   return cards;
 }
 
+// Seedable PRNG (mulberry32). Its state is saved with each Undo snapshot, so a rewound turn replays
+// with exactly the same draws and shuffles (no re-rolling the bag by undoing).
+let RNG_STATE = 0;
+try{ RNG_STATE = crypto.getRandomValues(new Uint32Array(1))[0] >>> 0; }
+catch(e){ RNG_STATE = Math.floor(Math.random()*4294967296) >>> 0; }
+function rand(){
+  RNG_STATE = (RNG_STATE + 0x6D2B79F5) >>> 0;
+  let t = RNG_STATE;
+  t = Math.imul(t ^ (t >>> 15), t | 1);
+  t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+  return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
 function shuffle(arr){
   const a = arr.slice();
   for(let i=a.length-1;i>0;i--){
-    const j = Math.floor(Math.random()*(i+1));
+    const j = Math.floor(rand()*(i+1));
     [a[i],a[j]]=[a[j],a[i]];
   }
   return a;
@@ -545,6 +557,7 @@ function shuffle(arr){
 // ---------- Game state ----------
 let G = null; // main game state
 let UI = { pendingSelection:null, pendingChoice:null, activeCard:null, cardPicks:[], message:'' };
+const UNDO = { key:null, snap:null, snapCore:null, rng:null }; // private snapshot of the start of the current turn (see Undo Turn)
 
 // ---------- Networking (online play via PeerJS / WebRTC — no server of our own) ----------
 // The host's browser owns the room: its PeerJS id is ROOM_PREFIX + room code, and the guest dials that id.
@@ -614,7 +627,8 @@ function saveSession(){
   try{
     localStorage.setItem(SESSION_KEY, JSON.stringify({
       code:NET.code, myPlayer:NET.myPlayer, token:NET.token, version:NET.version,
-      joined:NET.joined, G, savedAt:Date.now()
+      joined:NET.joined, G, savedAt:Date.now(),
+      undo: UNDO.snap ? {key:UNDO.key, snap:UNDO.snap, snapCore:UNDO.snapCore, rng:UNDO.rng} : null
     }));
   }catch(e){}
 }
@@ -1005,6 +1019,7 @@ async function tryResumeNetSession(){
   NET.enabled = true; NET.code = s.code; NET.myPlayer = s.myPlayer; NET.token = s.token;
   NET.version = s.version||0; NET.joined = !!s.joined; NET.link = 'down'; NET.peerLeft = false;
   G = s.G;
+  if(s.undo && s.undo.snap){ UNDO.key = s.undo.key; UNDO.snap = s.undo.snap; UNDO.snapCore = s.undo.snapCore; UNDO.rng = s.undo.rng; }
   NET.lastSent = JSON.stringify(G);
   updateStatus();
   startHeartbeat();
@@ -1138,6 +1153,7 @@ function freshTokenPool(){
 
 function newGame(){
   UI = { pendingSelection:null, pendingChoice:null, activeCard:null, cardPicks:[], message:'', coinKeepMode:null };
+  UNDO.key = null; UNDO.snap = null; UNDO.snapCore = null; UNDO.rng = null;
   const {singles, duals} = freshTokenPool();
   const singlesShuffled = shuffle(singles);
 
@@ -1170,6 +1186,7 @@ function newGame(){
   G = {
     board, bagTokens, extraTokens, extraUsed:false,
     deck, players,
+    gameId: rand().toString(36).slice(2,10), turnNo: 0, turnScoredAtStart: 0, // used by Undo Turn
     current: 0, // placeholder; determineFirstPlayer() below sets the real value
     turnPhase: 'draw', // draw -> place -> fireup(async) -> score -> (refresh happens on endTurn)
     drawnToken: null,
@@ -1595,6 +1612,8 @@ function endTurn(){
     addLog('End triggered! '+playerName(G.finalTurnFor)+' gets one final chance to score.', null);
   }
   G.current = opp(G.current);
+  G.turnNo = (G.turnNo||0) + 1;
+  G.turnScoredAtStart = G.players[G.current].scored.length;
   G.coinSpentThisTurn = false;
   G.cardPicksReset = true;
   UI.activeCard = null;
@@ -1623,6 +1642,54 @@ function finishGame(){
   else winner=-1;
   G.finalResult = {totals, winner};
   addLog('Game over! '+ (winner===-1?'A dual victory — it\'s a tie!':playerName(winner)+' wins!'), null);
+  render();
+}
+
+// ---------- Undo Turn ----------
+// At the start of each of your turns the game keeps a private snapshot (state + random-number state).
+// "Undo Turn" rewinds your current turn to that snapshot: board, hands, coins, bag and deck all return,
+// any half-finished ability prompt is cancelled, and the opponent's screen follows along in online play.
+// It only covers the turn you are in; once you press End Turn it can't be taken back.
+function undoKey(){ return G ? (G.gameId||'') + ':' + (G.turnNo||0) + ':' + G.current : null; }
+function coreJson(){ return JSON.stringify(Object.assign({}, G, {log:null})); }
+
+// True only when no action has been taken yet this turn, so the snapshot really is the turn start.
+function isPristineTurnStart(){
+  if(G.gameOver || G.coinSpentThisTurn || G.drawnToken) return false;
+  if(G.finalTurnFor===G.current){
+    return G.turnPhase==='score' && G.players[G.current].scored.length===(G.turnScoredAtStart||0);
+  }
+  return G.turnPhase==='draw';
+}
+
+function maybeCaptureUndo(){
+  if(!G || !isMyTurn()) return;
+  const key = undoKey();
+  if(UNDO.key===key) return;
+  UNDO.key = key;
+  if(isPristineTurnStart()){
+    UNDO.snap = JSON.stringify(G);
+    UNDO.snapCore = coreJson();
+    UNDO.rng = RNG_STATE;
+  } else {
+    // arrived mid-turn without a saved snapshot: there is nothing safe to rewind to
+    UNDO.snap = null; UNDO.snapCore = null; UNDO.rng = null;
+  }
+  if(NET.enabled) saveSession();
+}
+
+function canUndo(){
+  return !!G && isMyTurn() && !G.gameOver && !!UNDO.snap && UNDO.key===undoKey() && coreJson()!==UNDO.snapCore;
+}
+
+function undoTurn(){
+  if(!canUndo()) return;
+  const who = G.current;
+  G = JSON.parse(UNDO.snap);
+  RNG_STATE = UNDO.rng;
+  // drop any half-finished prompt; its pending promise is never resolved, so that ability flow simply ends
+  UI = { pendingSelection:null, pendingChoice:null, activeCard:null, cardPicks:[], message:'', coinKeepMode:null };
+  addLog(playerName(who)+' undid their turn and is starting it over.', who);
   render();
 }
 
@@ -1876,12 +1943,14 @@ function setupControlBar(){
   bar.innerHTML = `
     <button class="btn-primary" id="drawBtn">Draw Dragon</button>
     <button class="btn-gold" id="spendCoinBtn">Spend a Coin</button>
+    <button class="btn-ghost" id="undoBtn" title="Rewind your current turn back to its start (Ctrl/Cmd+Z)">&#8630; Undo Turn</button>
     <button class="btn-ghost" id="endTurnBtn">End Turn</button>
   `;
   const instrBox = document.getElementById('instructionBox');
   instrBox.parentNode.insertBefore(bar, instrBox);
   document.getElementById('drawBtn').addEventListener('click', doDraw);
   document.getElementById('spendCoinBtn').addEventListener('click', spendCoin);
+  document.getElementById('undoBtn').addEventListener('click', undoTurn);
   document.getElementById('endTurnBtn').addEventListener('click', endTurn);
 }
 
@@ -1893,6 +1962,7 @@ render = function(){
     return;
   }
   hideLobby();
+  maybeCaptureUndo();
   origRender();
   updateControlBar();
   updateHeaderButton();
@@ -1909,6 +1979,7 @@ function updateControlBar(){
   const drawBtn = document.getElementById('drawBtn');
   const spendBtn = document.getElementById('spendCoinBtn');
   const endBtn = document.getElementById('endTurnBtn');
+  const undoBtn = document.getElementById('undoBtn');
   if(!drawBtn) return;
   const myTurn = isMyTurn();
   const isFinal = G.finalTurnFor===G.current;
@@ -1919,6 +1990,8 @@ function updateControlBar(){
   endBtn.style.display = (G.gameOver || (NET.enabled && !myTurn)) ? 'none':'inline-block';
   endBtn.disabled = !canEnd;
   endBtn.textContent = isFinal ? 'End Game' : 'End Turn';
+  undoBtn.style.display = (G.gameOver || (NET.enabled && !myTurn)) ? 'none':'inline-block';
+  undoBtn.disabled = !canUndo();
 }
 
 // ---------- Init ----------
@@ -1960,6 +2033,11 @@ document.getElementById('newGameBtn').addEventListener('click', ()=>{
   } else {
     newGame();
   }
+});
+document.addEventListener('keydown', (e)=>{
+  if(!(e.ctrlKey||e.metaKey) || e.shiftKey || e.altKey || (e.key!=='z' && e.key!=='Z')) return;
+  if(/^(input|textarea|select)$/i.test((e.target&&e.target.tagName)||'')) return;
+  if(canUndo()){ e.preventDefault(); undoTurn(); }
 });
 setupControlBar();
 setupLobbyUI();
